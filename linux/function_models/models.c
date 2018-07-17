@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <s2e/function_models/commands.h>
 #include <s2e/function_models/models.h>
@@ -45,22 +46,38 @@ T_strncat orig_strncat = NULL;
 T_crc32 orig_crc32 = NULL;
 T_crc16 orig_crc16 = NULL;
 
+// Obtain the pointer to a symbol in a shared object. Exit if an error occurs
+static void *get_symbol(const char *symbol) {
+    // Clear any old error conditions
+    dlerror();
+
+    void *res = dlsym(RTLD_NEXT, symbol);
+    char *err = dlerror();
+
+    if (err) {
+        fprintf(stderr, "Failed to load symbol %s: %s\n", symbol, err);
+        exit(1);
+    }
+
+    return res;
+}
+
 // Save the original functions so we can use them if required
 void initialize_models() {
-    orig_strcpy = (T_strcpy) dlsym(RTLD_NEXT, "strcpy");
-    orig_strncpy = (T_strncpy) dlsym(RTLD_NEXT, "strncpy");
-    orig_strlen = (T_strlen) dlsym(RTLD_NEXT, "strlen");
-    orig_strcmp = (T_strcmp) dlsym(RTLD_NEXT, "strcmp");
-    orig_strncmp = (T_strncmp) dlsym(RTLD_NEXT, "strncmp");
-    orig_memcpy = (T_memcpy) dlsym(RTLD_NEXT, "memcpy");
-    orig_memcmp = (T_memcmp) dlsym(RTLD_NEXT, "memcmp");
-    orig_printf = (T_printf) dlsym(RTLD_NEXT, "printf");
-    orig_fprintf = (T_fprintf) dlsym(RTLD_NEXT, "fprintf");
-    orig_strcat = (T_strcat) dlsym(RTLD_NEXT, "strcat");
-    orig_strncat = (T_strncat) dlsym(RTLD_NEXT, "strncat");
+    orig_strcpy = (T_strcpy) get_symbol("strcpy");
+    orig_strncpy = (T_strncpy) get_symbol("strncpy");
+    orig_strlen = (T_strlen) get_symbol("strlen");
+    orig_strcmp = (T_strcmp) get_symbol("strcmp");
+    orig_strncmp = (T_strncmp) get_symbol("strncmp");
+    orig_memcpy = (T_memcpy) get_symbol("memcpy");
+    orig_memcmp = (T_memcmp) get_symbol("memcmp");
+    orig_printf = (T_printf) get_symbol("printf");
+    orig_fprintf = (T_fprintf) get_symbol("fprintf");
+    orig_strcat = (T_strcat) get_symbol("strcat");
+    orig_strncat = (T_strncat) get_symbol("strncat");
 
-    orig_crc32 = (T_crc32) dlsym(RTLD_NEXT, "crc32");
-    orig_crc16 = (T_crc16) dlsym(RTLD_NEXT, "crc16");
+    orig_crc32 = (T_crc32) get_symbol("crc32");
+    orig_crc16 = (T_crc16) get_symbol("crc16");
 }
 
 char *strcpy_model(char *dest, const char *src) {
